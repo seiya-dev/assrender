@@ -60,9 +60,15 @@ The color space of your (YUV) video. Possible values:
  - Rec2020, BT.2020
  - Rec709, BT.709
  - Rec601, BT.601
+ - PC.709
+ - PC.601
+ - TV.fcc, PC.fcc
+ - TV.240m, PC.240m
+ - none
  
-Default is to use the ASS script’s "YCbCr Matrix:" or "Video Colorspace" property, else guess based on video resolution (width > 1920 or height > 1080 → BT.2020, then width > 1280 or height > 576 → BT.709).
-Recognized .ASS properties: "tv.601" "tv.709". Other values like "pc.601" "pc.709" "tv.240m" "pc.240m" "tv.fcc" "pc.fcc" are treated as 'guess'.
+Default is to use the ASS script's "YCbCr Matrix:" or "Video Colorspace" property.
+Recognized .ASS properties: "TV.601" "TV.709", "PC.601" "PC.709" "TV.240m" "PC.240m" "TV.fcc" "PC.fcc" and "none". 
+"none" is treated as 'guess' which is based on video resolution: width > 1280 or height > 576 → BT.709, else → BT.601.
 
 # Build instructions
 
@@ -181,6 +187,7 @@ Recognized .ASS properties: "tv.601" "tv.709". Other values like "pc.601" "pc.70
   For changes since v0.14 see https://github.com/libass/libass/blob/master/Changelog
 * don't guess base on video resolution (realfinder)
   if .ass file has no Matrix info then it should be treated as it "Rec601" to maintain compatibility
+* Add more color options: PC.709, PC.601, TV.fcc, PC.fcc, TV.240m, PC.240m, none. "None" implies "guess-by-resolution".
 
 ## 0.34 (20210301)
 * Fix the fix: revert matrix change made in 0.33	
