@@ -176,19 +176,57 @@ AVS_Value AVSC_CC assrender_create(AVS_ScriptEnvironment* env, AVS_Value args,
         data->isvfr = 0;
     }
 
+    matrix_type color_mt;
+
     if (avs_is_rgb(&fi->vi)) {
-      data->color_matrix = col2rgb;
+      color_mt = MATRIX_NONE; // no RGB->YUV conversion
     } else {
         // .ASS "YCbCr Matrix" valid values are
         // "none" "tv.601" "pc.601" "tv.709" "pc.709" "tv.240m" "pc.240m" "tv.fcc" "pc.fcc"
-        if (!strcasecmp(tmpcsp, "bt.709") || !strcasecmp(tmpcsp, "rec709") || !strcasecmp(tmpcsp, "tv.709"))
-            data->color_matrix = col2yuv709;
-        else if (!strcasecmp(tmpcsp, "bt.601") || !strcasecmp(tmpcsp, "rec601") || !strcasecmp(tmpcsp, "tv.601"))
-            data->color_matrix = col2yuv601;
-        else if (!strcasecmp(tmpcsp, "bt.2020") || !strcasecmp(tmpcsp, "rec2020"))
-            data->color_matrix = col2yuv2020;
-        else data->color_matrix = col2yuv601;
+      if (!strcasecmp(tmpcsp, "bt.709") || !strcasecmp(tmpcsp, "rec709") || !strcasecmp(tmpcsp, "tv.709")) {
+        color_mt = MATRIX_BT709;
+      }
+      else if (!strcasecmp(tmpcsp, "pc.709")) {
+        color_mt = MATRIX_PC709;
+      }
+      else if (!strcasecmp(tmpcsp, "bt.601") || !strcasecmp(tmpcsp, "rec601") || !strcasecmp(tmpcsp, "tv.601")) {
+        color_mt = MATRIX_BT601;
+      }
+      else if (!strcasecmp(tmpcsp, "pc.601")) {
+        color_mt = MATRIX_PC601;
+      }
+      else if (!strcasecmp(tmpcsp, "tv.fcc")) {
+        color_mt = MATRIX_TVFCC;
+      }
+      else if (!strcasecmp(tmpcsp, "pc.fcc")) {
+        color_mt = MATRIX_PCFCC;
+      }
+      else if (!strcasecmp(tmpcsp, "tv.240m")) {
+        color_mt = MATRIX_TV240M;
+      }
+      else if (!strcasecmp(tmpcsp, "pc.240m")) {
+        color_mt = MATRIX_PC240M;
+      }
+      else if (!strcasecmp(tmpcsp, "bt.2020") || !strcasecmp(tmpcsp, "rec2020")) {
+        color_mt = MATRIX_BT2020;
+      }
+      else if (!strcasecmp(tmpcsp, "none")) {
+        /* not yet
+        if (fi->vi.width > 1920 || fi->vi.height > 1080)
+          color_mt = MATRIX_BT2020;
+        else 
+        */
+        if (fi->vi.width > 1280 || fi->vi.height > 576)
+          color_mt = MATRIX_PC709;
+        else
+          color_mt = MATRIX_PC601;
+      }
+      else {
+        color_mt = MATRIX_BT601;
+      }
     }
+
+    FillMatrix(&data->mx, color_mt);
 
 #ifdef FOR_AVISYNTH_26_ONLY
     const int bits_per_pixel = 8;

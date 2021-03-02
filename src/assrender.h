@@ -21,9 +21,34 @@
 #define atoll _atoi64
 #endif
 
-typedef void (* fColMat)(uint32_t* col, uint8_t* c1, uint8_t* c2, uint8_t* c3);
+typedef struct {
+  // premultiplied coefficients for integer scaled arithmetics
+  int y_r, y_g, y_b;
+  int u_r, u_g, u_b;
+  int v_r, v_g, v_b;
+  int offset_y;
+  bool valid;
+} ConversionMatrix;
+
+typedef enum {
+  MATRIX_NONE = 0,
+  MATRIX_BT601,
+  MATRIX_PC601,
+  MATRIX_BT709,
+  MATRIX_PC709,
+  MATRIX_PC2020,
+  MATRIX_BT2020,
+  MATRIX_TVFCC,
+  MATRIX_PCFCC,
+  MATRIX_TV240M,
+  MATRIX_PC240M
+} matrix_type;
+
 typedef void (* fPixel)(uint8_t** sub_img, uint8_t** data, uint32_t* pitch, uint32_t width, uint32_t height);
-typedef void (* fMakeSubImg)(ASS_Image* img, uint8_t** sub_img, uint32_t width, fColMat color_matrix, int bits_per_pixel, int rgb);
+typedef void (* fMakeSubImg)(ASS_Image* img, uint8_t** sub_img, uint32_t width, int bits_per_pixel, int rgb, ConversionMatrix* m);
+
+void col2yuv(uint32_t* c, uint8_t* y, uint8_t* u, uint8_t* v, ConversionMatrix* m);
+void col2rgb(uint32_t* c, uint8_t* r, uint8_t* g, uint8_t* b);
 
 typedef struct {
     uint8_t* sub_img[4];
@@ -32,7 +57,7 @@ typedef struct {
     ASS_Library* ass_library;
     ASS_Renderer* ass_renderer;
     int64_t* timestamp;
-    fColMat color_matrix;
+    ConversionMatrix mx;
     fPixel apply;
     fMakeSubImg f_make_sub_img;
     int bits_per_pixel;

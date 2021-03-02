@@ -1,6 +1,100 @@
 #include "render.h"
 
-void make_sub_img(ASS_Image* img, uint8_t** sub_img, uint32_t width, fColMat color_matrix, int bits_per_pixel, int rgb)
+// Kg is not parameter, calculated from Kr and Kb
+static void BuildMatrix(ConversionMatrix* matrix, double Kr, double Kb, int shift, int full_scale, int bits_per_pixel)
+{
+  int Sy, Suv, Oy;
+
+  // for 8-16 bits
+  Oy = full_scale ? 0 : (16 << (bits_per_pixel - 8));
+
+  const int ymin = (full_scale ? 0 : 16) << (bits_per_pixel - 8);
+  const int max_pixel_value = (1 << bits_per_pixel) - 1;
+  const int ymax = full_scale ? max_pixel_value : (235 << (bits_per_pixel - 8));
+  Sy = ymax - ymin;
+
+  const int cmin = full_scale ? 0 : (16 << (bits_per_pixel - 8));
+  const int cmax = full_scale ? max_pixel_value : (240 << (bits_per_pixel - 8));
+  Suv = (cmax - cmin) / 2;
+
+  const double mulfac = (double)(1ULL << shift); // integer aritmetic precision scale
+
+  const double Kg = 1. - Kr - Kb;
+
+  const int Srgb = (1 << bits_per_pixel) - 1;
+  matrix->y_b = (int)(Sy * Kb * mulfac / Srgb + 0.5); //B
+  matrix->y_g = (int)(Sy * Kg * mulfac / Srgb + 0.5); //G
+  matrix->y_r = (int)(Sy * Kr * mulfac / Srgb + 0.5); //R
+  matrix->u_b = (int)(Suv * mulfac / Srgb + 0.5);
+  matrix->u_g = (int)(Suv * Kg / (Kb - 1) * mulfac / Srgb + 0.5);
+  matrix->u_r = (int)(Suv * Kr / (Kb - 1) * mulfac / Srgb + 0.5);
+  matrix->v_b = (int)(Suv * Kb / (Kr - 1) * mulfac / Srgb + 0.5);
+  matrix->v_g = (int)(Suv * Kg / (Kr - 1) * mulfac / Srgb + 0.5);
+  matrix->v_r = (int)(Suv * mulfac / Srgb + 0.5);
+  matrix->offset_y = Oy;
+  matrix->valid = true;
+}
+
+void FillMatrix(ConversionMatrix* matrix, matrix_type mt)
+{
+  const int bits_per_pixel = 8;
+  const int bitshift = 16; // for integer arithmetic
+  matrix->valid = true;
+
+  switch (mt) {
+  case MATRIX_NONE:
+    matrix->valid = false;
+    break;
+  case MATRIX_BT601:
+    BuildMatrix(matrix, 0.299,  /* 0.587  */ 0.114, bitshift, false, bits_per_pixel); // false: limited range
+    break;
+  case MATRIX_PC601:
+    BuildMatrix(matrix, 0.299,  /* 0.587  */ 0.114, bitshift, true, bits_per_pixel); // true: full scale
+    break;
+  case MATRIX_BT709:
+    BuildMatrix(matrix, 0.2126, /* 0.7152 */ 0.0722, bitshift, false, bits_per_pixel); // false: limited range
+    break;
+  case MATRIX_PC709:
+    BuildMatrix(matrix, 0.2126, /* 0.7152 */ 0.0722, bitshift, true, bits_per_pixel); // true: full scale
+    break;
+  case MATRIX_BT2020:
+    BuildMatrix(matrix, 0.2627, /* 0.6780 */ 0.0593, bitshift, false, bits_per_pixel); // false: limited range
+    break;
+  case MATRIX_PC2020:
+    BuildMatrix(matrix, 0.2627, /* 0.6780 */ 0.0593, bitshift, true, bits_per_pixel); // true: full scale
+    break;
+  case MATRIX_TVFCC:
+    BuildMatrix(matrix, 0.300, /* 0.590 */ 0.110, bitshift, false, bits_per_pixel); // false: limited range
+    break;
+  case MATRIX_PCFCC:
+    BuildMatrix(matrix, 0.300, /* 0.590 */ 0.110, bitshift, true, bits_per_pixel); //  true: full scale
+    break;
+  case MATRIX_TV240M:
+    BuildMatrix(matrix, 0.212, /* 0.701 */ 0.087, bitshift, false, bits_per_pixel); // false: limited range
+    break;
+  case MATRIX_PC240M:
+    BuildMatrix(matrix, 0.212, /* 0.701 */ 0.087, bitshift, true, bits_per_pixel); //  true: full scale
+    break;
+  default:
+    matrix->valid = false;
+  }
+}
+
+inline void col2rgb(uint32_t* c, uint8_t* r, uint8_t* g, uint8_t* b)
+{
+  *r = _r(*c);
+  *g = _g(*c);
+  *b = _b(*c);
+}
+
+inline void col2yuv(uint32_t* c, uint8_t* y, uint8_t* u, uint8_t* v, ConversionMatrix* m)
+{
+  *y = div65536(m->y_r * _r(*c) + m->y_g * _g(*c) + m->y_b * _b(*c)) + m->offset_y;
+  *u = div65536(m->u_r * _r(*c) + m->u_g * _g(*c) + m->u_b * _b(*c)) + 128;
+  *v = div65536(m->v_r * _r(*c) + m->v_g * _g(*c) + m->v_b * _b(*c)) + 128;
+}
+
+void make_sub_img(ASS_Image* img, uint8_t** sub_img, uint32_t width, int bits_per_pixel, int rgb, ConversionMatrix* mx)
 {
     uint8_t c1, c2, c3, a, a1;
     uint8_t* src;
@@ -15,7 +109,10 @@ void make_sub_img(ASS_Image* img, uint8_t** sub_img, uint32_t width, fColMat col
         }
 
         // color comes always in 8 bits
-        color_matrix(&img->color, &c1, &c2, &c3);
+        if(mx->valid)
+          col2yuv(&img->color, &c1, &c2, &c3, mx);
+        else
+          col2rgb(&img->color, &c1, &c2, &c3);
         a1 = 255 - _a(img->color); // transparency
 
         src = img->bitmap;
@@ -54,7 +151,7 @@ void make_sub_img(ASS_Image* img, uint8_t** sub_img, uint32_t width, fColMat col
     }
 }
 
-void make_sub_img16(ASS_Image* img, uint8_t** sub_img0, uint32_t width, fColMat color_matrix, int bits_per_pixel, int rgb)
+void make_sub_img16(ASS_Image* img, uint8_t** sub_img0, uint32_t width, int bits_per_pixel, int rgb, ConversionMatrix *mx)
 {
   uint16_t** sub_img = (uint16_t**)sub_img0;
 
@@ -77,7 +174,10 @@ void make_sub_img16(ASS_Image* img, uint8_t** sub_img0, uint32_t width, fColMat 
     }
 
     // color comes always in 8 bits
-    color_matrix(&img->color, &c1_8, &c2_8, &c3_8);
+    if (mx->valid)
+      col2yuv(&img->color, &c1_8, &c2_8, &c3_8, mx);
+    else
+      col2rgb(&img->color, &c1_8, &c2_8, &c3_8);
     a1 = 255 - _a(img->color); // transparency, always 0..255
     if (rgb) {
       const int max_pixel_value = (1 << bits_per_pixel) - 1;
@@ -842,7 +942,7 @@ AVS_VideoFrame* AVSC_CC assrender_get_frame(AVS_FilterInfo* p, int n)
 
         if (changed) {
             memset(ud->sub_img[0], 0x00, height * width * ud->pixelsize);
-            ud->f_make_sub_img(img, ud->sub_img, width, ud->color_matrix, ud->bits_per_pixel, ud->rgb_fullscale);
+            ud->f_make_sub_img(img, ud->sub_img, width, ud->bits_per_pixel, ud->rgb_fullscale, &ud->mx);
         }
 
         ud->apply(ud->sub_img, data, pitch, width, height);
