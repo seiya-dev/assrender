@@ -175,22 +175,29 @@ Recognized .ASS properties: "tv.601" "tv.709". Other values like "pc.601" "pc.70
 * Avisynth wiki: http://avisynth.nl/index.php/AssRender
 
 # Change log
-## 0.34 (20210301 - pinterf)
+## 0.35 (20210302 - WIP)
+* Windows MSVC: Update to libass v0.15
+  (git submodule update --init --recursive --remote)
+  For changes since v0.14 see https://github.com/libass/libass/blob/master/Changelog
+* don't guess base on video resolution (realfinder)
+  if .ass file has no Matrix info then it should be treated as it "Rec601" to maintain compatibility
+
+## 0.34 (20210301)
 * Fix the fix: revert matrix change made in 0.33	
 * Fix: Check matrix from .ASS file "YCbCr Matrix:" section besides "Video Colorspace:"
   Recognized values are "tv.601" and "tv.709"
 
-## 0.33 (20210228 - pinterf)
-* Fix: wrong Bt.709 matrix
+## 0.33 (20210228)
+* Fix: wrong Bt.709 matrix (it wasn't :) )
 
-## 0.32 (20210227 - pinterf)
+## 0.32 (20210227)
 * Fix: treat I420 variant as YV12 instead of unsupported color space
 
-## 0.31 (20210218 - pinterf)
+## 0.31 (20210218)
 * Fix colors for planar RGB
 * code: hidden ifdef FOR_AVISYNTH_26_ONLY for Avisynth 2.6-only build
 
-## 0.30 (20210217 - pinterf)
+## 0.30 (20210217)
 * From now assrender does not works with classic Aviysnth: high-bitdepth helper function calls
 * 10-16 bit support (including RGB48 and RGB64)
 * YV411, Planar RGB support
