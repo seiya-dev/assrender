@@ -119,7 +119,7 @@ int init_ass(int w, int h, double scale, double line_spacing,
         ass_set_line_spacing(ass_renderer, line_spacing);
 
     if (dar && sar)
-        ass_set_aspect_ratio(ass_renderer, dar, sar);
+        ass_set_pixel_aspect(ass_renderer, dar / sar);
 
     if (strcmp(fontdir, ""))
         ass_set_fonts_dir(ass_library, fontdir);
