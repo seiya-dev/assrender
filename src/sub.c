@@ -81,7 +81,7 @@ ASS_Track* parse_srt(const char* f, udata* ud, const char* srt_font)
 
 void msg_callback(int level, const char* fmt, va_list va, void* data)
 {
-    if (level > (int)data)
+    if (level > (intptr_t)data)
         return;
 
     fprintf(stderr, "libass: ");
@@ -100,7 +100,7 @@ int init_ass(int w, int h, double scale, double line_spacing,
     if (!ass_library)
         return 0;
 
-    ass_set_message_cb(ass_library, msg_callback, (void*)verbosity);
+    ass_set_message_cb(ass_library, msg_callback, (void*)(intptr_t)verbosity);
     ass_set_extract_fonts(ass_library, 0);
     ass_set_style_overrides(ass_library, 0);
 
