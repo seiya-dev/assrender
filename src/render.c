@@ -99,7 +99,7 @@ void make_sub_img(ASS_Image* img, uint8_t** sub_img, uint32_t width, int bits_pe
     uint8_t c1, c2, c3, a, a1;
     uint8_t* src;
     uint8_t* dstC1, * dstC2, * dstC3, * dstA;
-    uint32_t i, j, dsta;
+    uint32_t dsta;
 
     while (img) {
         if (img->w == 0 || img->h == 0) {
@@ -121,8 +121,8 @@ void make_sub_img(ASS_Image* img, uint8_t** sub_img, uint32_t width, int bits_pe
         dstC3 = sub_img[3] + img->dst_y * width + img->dst_x;
         dstA = sub_img[0] + img->dst_y * width + img->dst_x;
 
-        for (i = 0; i < img->h; i++) {
-            for (j = 0; j < img->w; j++) {
+        for (int i = 0; i < img->h; i++) {
+            for (int j = 0; j < img->w; j++) {
                 a = div255(src[j] * a1);
                 if (a) {
                     if (dstA[j]) {
@@ -162,9 +162,7 @@ void make_sub_img16(ASS_Image* img, uint8_t** sub_img0, uint32_t width, int bits
 
   uint8_t* src;
   uint16_t* dstC1, * dstC2, * dstC3, * dstA;
-  uint32_t i, j, dsta;
-
-  const int fullscale = 0;
+  uint32_t dsta;
 
   while (img) {
     if (img->w == 0 || img->h == 0) {
@@ -200,8 +198,8 @@ void make_sub_img16(ASS_Image* img, uint8_t** sub_img0, uint32_t width, int bits
     dstC3 = sub_img[3] + img->dst_y * width + img->dst_x;
     dstA = sub_img[0] + img->dst_y * width + img->dst_x;
 
-    for (i = 0; i < img->h; i++) {
-      for (j = 0; j < img->w; j++) {
+    for (int i = 0; i < img->h; i++) {
+      for (int j = 0; j < img->w; j++) {
         a = div255(src[j] * a1);
         if (a) {
           if (dstA[j]) {
@@ -628,8 +626,8 @@ void apply_yv411(uint8_t** sub_img, uint8_t** data, uint32_t* pitch, uint32_t wi
   dstU = data[1];
   dstV = data[2];
 
-  for (int i = 0; i < height; i++) {
-    for (int j = 0; j < width / 4; j++) {
+  for (unsigned int i = 0; i < height; i++) {
+    for (unsigned int j = 0; j < width / 4; j++) {
       int jy = j * 4;
       if (srcA[jy] + srcA[jy + 1] + srcA[jy + 2] + srcA[jy + 3]) {
         dstY0[jy + 0] = blend(srcA[jy + 0], srcY[jy + 0], dstY0[jy + 0]);
