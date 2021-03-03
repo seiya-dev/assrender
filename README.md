@@ -182,13 +182,14 @@ Recognized .ASS properties: "TV.601" "TV.709", "PC.601" "PC.709" "TV.240m" "PC.2
 * Avisynth wiki: http://avisynth.nl/index.php/AssRender
 
 # Change log
-## 0.35 (20210302 - WIP)
+## 0.35 (20210303 - WIP)
 * Windows MSVC: Update to libass v0.15
   (git submodule update --init --recursive --remote)
   For changes since v0.14 see https://github.com/libass/libass/blob/master/Changelog
 * don't guess base on video resolution (realfinder)
   if .ass file has no Matrix info then it should be treated as it "Rec601" to maintain compatibility
 * Add more color options: PC.709, PC.601, TV.fcc, PC.fcc, TV.240m, PC.240m, none. "None" implies "guess-by-resolution".
+* Fix: possible crash on initializing phase (buffer overread, linux crashed, Windows was just lucky)
 
 ## 0.34 (20210301)
 * Fix the fix: revert matrix change made in 0.33	
