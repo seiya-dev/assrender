@@ -64,7 +64,7 @@ AVS_Value AVSC_CC assrender_create(AVS_ScriptEnvironment* env, AVS_Value args,
                              avs_as_string(avs_array_elt(args, 16)) : "guess";
 
     char* tmpcsp = calloc(1, BUFSIZ);
-    memcpy(tmpcsp, colorspace, BUFSIZ - 1);
+    strncpy(tmpcsp, colorspace, BUFSIZ - 1);
 
     ASS_Hinting hinting;
     udata* data;
