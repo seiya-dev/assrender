@@ -48,7 +48,8 @@ How much crap assrender is supposed to spam to stderr.
 
 Additional font directory.
 Useful if you are lazy but want to keep your system fonts clean.
-	
+Default value: C:/Windows/Fonts or /usr/share/fonts (Windows and linux respectively)
+
 `string srt_font`
 
 Font to use for SRT subtitles.
