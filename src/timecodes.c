@@ -17,7 +17,7 @@ int parse_timecodesv1(FILE* f, int total, udata* ud)
         if (sscanf(l, "Assume %lf", &basefps) == 1)
             continue;
 
-        if (!sscanf(l, "%d,%d,%lf", &start, &end, &fps) == 3)
+        if (!(sscanf(l, "%d,%d,%lf", &start, &end, &fps) == 3))
             continue;
 
         if (basefps == 0.0)
