@@ -61,7 +61,7 @@ AVS_Value AVSC_CC assrender_create(AVS_ScriptEnvironment* env, AVS_Value args,
     const char* srt_font = avs_as_string(avs_array_elt(args, 15)) ?
                            avs_as_string(avs_array_elt(args, 15)) : "sans-serif";
     const char* colorspace = avs_as_string(avs_array_elt(args, 16)) ?
-                             avs_as_string(avs_array_elt(args, 16)) : "guess";
+                             avs_as_string(avs_array_elt(args, 16)) : "";
 
     char* tmpcsp = calloc(1, BUFSIZ);
     strncpy(tmpcsp, colorspace, BUFSIZ - 1);
@@ -214,8 +214,9 @@ AVS_Value AVSC_CC assrender_create(AVS_ScriptEnvironment* env, AVS_Value args,
       else if (!strcasecmp(tmpcsp, "bt.2020") || !strcasecmp(tmpcsp, "rec2020")) {
         color_mt = MATRIX_BT2020;
       }
-      else if (!strcasecmp(tmpcsp, "none")) {
+      else if (!strcasecmp(tmpcsp, "none") || !strcasecmp(tmpcsp, "guess")) {
         /* not yet
+        * Theoretically only for 10 and 12 bits:
         if (fi->vi.width > 1920 || fi->vi.height > 1080)
           color_mt = MATRIX_BT2020;
         else 
