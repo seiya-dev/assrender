@@ -107,9 +107,9 @@ AVS_Value AVSC_CC assrender_create(AVS_ScriptEnvironment* env, AVS_Value args,
 
     data = malloc(sizeof(udata));
 
-    if (!init_ass(fi->vi.width, fi->vi.height, scale, line_spacing, dar, sar,
-                  top, bottom, left, right, hinting, debuglevel, fontdir,
-                  data)) {
+    if (!init_ass(fi->vi.width, fi->vi.height, scale, line_spacing,
+                  hinting, dar, sar, top, bottom, left, right,
+                  debuglevel, fontdir, data)) {
         v = avs_new_value_error("AssRender: failed to initialize");
         avs_release_clip(c);
         return v;
