@@ -80,8 +80,8 @@ When no hint found in ASS script and 'colorspace' parameter is empty then the de
 
 ### Windows Visual Studio 2019
 
-* Prequisite: vsyasm integration
-  - get VSYASM from https://github.com/ShiftMediaProject/VSYASM
+* Prequisite: vsnasm integration
+  - get VSYASM from https://github.com/ShiftMediaProject/VSNASM
   - run install_script.bat
 
 * Clone repo
