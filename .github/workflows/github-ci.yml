@@ -2,7 +2,7 @@ name: GitHub CI
 
 on:
   push:
-  workflow_dispatch:
+  workflow_dispatch: #
 
 jobs:
   build-linux:
@@ -41,6 +41,8 @@ jobs:
       - name: install submodules and nasm
         run: |
           git submodule update --init --recursive
+          git clone https://github.com/ShiftMediaProject/VSYASM.git
+          .\VSYASM\install_script.bat
           git clone https://github.com/ShiftMediaProject/VSNASM.git
           .\VSNASM\install_script.bat
       - uses: actions/setup-node@v3
