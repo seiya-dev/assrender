@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Git checkout
         uses: actions/checkout@v3
-      - name: install deps
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install cmake git ninja-build checkinstall
@@ -41,28 +41,43 @@ jobs:
     steps:
       - name: Git checkout
         uses: actions/checkout@v3
-      - name: install submodules, nasm and yasm
+      - name: Install dependencies
         run: |
           git submodule update --init --recursive
           git clone https://github.com/ShiftMediaProject/VSYASM.git
           .\VSYASM\install_script.bat
           git clone https://github.com/ShiftMediaProject/VSNASM.git
           .\VSNASM\install_script.bat
-      - uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          install: base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-libass
-          msystem: MINGW64
-          path-type: inherit
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-      - name: download avisynthplus metadata
-        run: |
           md avsplus
-          curl "https://api.github.com/repos/avisynth/avisynthplus/releases" --output "./avsplus/releases.json"
-          echo PACKAGE_URL=$(node -p -e "const d = require('./avsplus/releases.json');let l='';for(let r of d){if(r.prerelease||r.draft){continue;}for(let f of r.assets){if(f.name.match(/-filesonly.7z$/i)){l=f.browser_download_url}}if(l!=''){break;}}l") >> $env:GITHUB_ENV
-      - name: download avisynthplus
+      # - name: Install MSYS2 with dependencies
+      #   uses: msys2/setup-msys2@v2
+      #   with:
+      #     update: true
+      #     install: base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-libass
+      #     msystem: MINGW64
+      #     path-type: inherit
+      - name: Parse AviSynth+ release metadata
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const req = await github.request('https://api.github.com/repos/avisynth/avisynthplus/releases');
+            const data = req.data;
+            let link = '';
+            for(let rel of data){
+                if(rel.prerelease||rel.draft){
+                    continue;
+                }
+                for(let asset of rel.assets){
+                    if(asset.name.match(/-filesonly.7z$/i)){
+                        link = asset.browser_download_url;
+                    }
+                }
+                if(link != ''){
+                    break;
+                }
+            }
+            core.exportVariable('PACKAGE_URL', link);
+      - name: Download AviSynth+ latest release
         run: curl -L "${{ env.PACKAGE_URL }}" -o "./avsplus/avisynthplus-latest-filesonly.7z"
       - name: move libs files
         run: |
@@ -70,17 +85,21 @@ jobs:
           7z e "avsplus\*-filesonly.7z" -o"lib\x86-64" "*\x64\c_api\AviSynth.lib"
       - name: add msbuild to PATH
         uses: microsoft/setup-msbuild@v1
-      - name: build-x86
+      - name: Build x86 binary
         run: MSBuild.exe /t:Rebuild /p:PlatformToolset=v142 /m /p:Configuration=Release /p:Platform=x86
-      - name: build-x64
+      - name: Build x64 binary
         run: MSBuild.exe /t:Rebuild /p:PlatformToolset=v142 /m /p:Configuration=Release /p:Platform=x64
-      - name: build-msys
-        shell: msys2 {0}
-        run: |
-          cmake -G "MSYS Makefiles" -B build -S .
-          cmake --build build --clean-first
-      - name: copy
-        run: cmake -E copy "bin\Release_Win32\assrender.dll" "dist\Release_x86\assrender.dll" && cmake -E copy "bin\Release_x64\assrender.dll" "dist\Release_x64\assrender.dll"
+      # - name: build-msys
+      #   shell: msys2 {0}
+      #   run: |
+      #     cmake -G "MSYS Makefiles" -B build -S .
+      #     cmake --build build --clean-first
+      - name: Copy x86 binary
+        run: cmake -E copy "bin\Release_Win32\assrender.dll" "dist\Release_x86\assrender.dll"
+      - name: Copy x64 binary
+        run: cmake -E copy "bin\Release_x64\assrender.dll" "dist\Release_x64\assrender.dll"
+      # - name: Copy MINGW64 binary
+      #   run: cmake -E copy "build\src\assrender.dll" "dist\Release_MINGW64\assrender.dll"
       - name: upload
         uses: actions/upload-artifact@v2
         with:
