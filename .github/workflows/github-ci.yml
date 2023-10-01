@@ -29,7 +29,7 @@ jobs:
       - name: Copy binary
         run: cmake -E copy "build/src/libassrender.so" "dist/libassrender.so"
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: assrender_bin_linux
           path: dist
@@ -99,7 +99,7 @@ jobs:
       # - name: Copy MINGW64 binary
       #   run: cmake -E copy "build\src\assrender.dll" "dist\Release_MINGW64\assrender.dll"
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: assrender_bin_win
           path: dist

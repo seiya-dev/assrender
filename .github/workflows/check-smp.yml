@@ -40,7 +40,7 @@ jobs:
           echo SUBMODULE_SHA=$(git rev-parse HEAD) >> $GITHUB_ENV
       - name: Get submodule current remote
         id: current
-        uses: cardinalby/git-get-release-action@1.2.2
+        uses: cardinalby/git-get-release-action@1.2.4
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
@@ -49,7 +49,7 @@ jobs:
           doNotFailIfNotFound: true
       - name: Get submodule latest remote
         id: latest
-        uses: cardinalby/git-get-release-action@1.2.2
+        uses: cardinalby/git-get-release-action@1.2.4
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
@@ -72,13 +72,13 @@ jobs:
           echo NEED_UPDATE=1 >> $GITHUB_ENV
       - name: Run update
         if: ${{ env.NEED_UPDATE }} == '1'
-        uses: peter-evans/create-pull-request@v4
+        uses: peter-evans/create-pull-request@v5
         with: 
           commit-message: Update ${{ matrix.submodule }} to ${{ steps.latest.outputs.tag_name }}
-          branch: submodule-${{ matrix.submodule }}-${{ steps.latest.outputs.tag_name }}
+          branch: submodule-${{ matrix.submodule }}
           base: master
           delete-branch: true
-          title: Update ${{ matrix.submodule }} to ${{ steps.latest.outputs.tag_name }}
+          title: Update ${{ matrix.submodule }}
           body: |
             Update ${{ matrix.submodule }} to ${{ steps.latest.outputs.tag_name }}
             Current: ${{ env.SUBMODULE_REV }}
