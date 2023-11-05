@@ -29,7 +29,7 @@ jobs:
       - name: Copy binary
         run: cmake -E copy "build/src/libassrender.so" "dist/libassrender.so"
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: assrender_bin_linux
           path: dist
@@ -39,14 +39,10 @@ jobs:
     steps:
       - name: Git checkout
         uses: actions/checkout@v3
-      - name: Install dependencies
+      - name: Pull submodules
         run: |
           git submodule update --init --recursive
-          git clone https://github.com/ShiftMediaProject/VSYASM.git
-          .\VSYASM\install_script.bat
-          git clone https://github.com/ShiftMediaProject/VSNASM.git
-          .\VSNASM\install_script.bat
-          md avsplus
+          mkdir avsplus
       # - name: Install MSYS2 with dependencies
       #   uses: msys2/setup-msys2@v2
       #   with:
@@ -76,17 +72,27 @@ jobs:
             }
             core.exportVariable('PACKAGE_URL', link);
       - name: Download AviSynth+ latest release
-        run: curl -L "${{ env.PACKAGE_URL }}" -o "./avsplus/avisynthplus-latest-filesonly.7z"
+        run: curl -L "${{ env.PACKAGE_URL }}" --create-dirs -o "./avsplus/avisynthplus-latest-filesonly.7z"
       - name: Move libs files
         run: |
-          7z e "avsplus\*-filesonly.7z" -o"lib\x86-32" "*\x86\c_api\AviSynth.lib"
-          7z e "avsplus\*-filesonly.7z" -o"lib\x86-64" "*\x64\c_api\AviSynth.lib"
+          7z e "avsplus\*-filesonly.7z" -o"lib\x86-32" "*\x86\Output\c_api\AviSynth.lib"
+          7z e "avsplus\*-filesonly.7z" -o"lib\x86-64" "*\x64\Output\c_api\AviSynth.lib"
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v1
-      - name: Build x86 binary
-        run: MSBuild.exe /t:Rebuild /p:PlatformToolset=v142 /m /p:Configuration=Release /p:Platform=x86
-      - name: Build x64 binary
-        run: MSBuild.exe /t:Rebuild /p:PlatformToolset=v142 /m /p:Configuration=Release /p:Platform=x64
+      - name: Prepare NASM
+        uses: ilammy/setup-nasm@v1
+      - name: Setup VSYASM and VSNASM
+        run: |
+          git clone https://github.com/ShiftMediaProject/VSYASM.git
+          .\VSYASM\install_script.bat
+          git clone https://github.com/ShiftMediaProject/VSNASM.git
+          .\VSNASM\install_script.bat
+      - name: Build binaries
+        shell: cmd
+        run: |
+          set NASMPATH=%USERPROFILE%\nasm\
+          MSBuild.exe /t:Rebuild /p:PlatformToolset=v142 /m /p:Configuration=Release /p:Platform=x86
+          MSBuild.exe /t:Rebuild /p:PlatformToolset=v142 /m /p:Configuration=Release /p:Platform=x64
       # - name: Build MINGW64 binary
       #   shell: msys2 {0}
       #   run: |
@@ -99,7 +105,7 @@ jobs:
       # - name: Copy MINGW64 binary
       #   run: cmake -E copy "build\src\assrender.dll" "dist\Release_MINGW64\assrender.dll"
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: assrender_bin_win
           path: dist
