@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -29,7 +29,7 @@ jobs:
       - name: Copy binary
         run: cmake -E copy "build/src/libassrender.so" "dist/libassrender.so"
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: assrender_bin_linux
           path: dist
@@ -38,7 +38,7 @@ jobs:
     runs-on: windows-2019
     steps:
       - name: Git checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Pull submodules
         run: |
           git submodule update --init --recursive
@@ -51,7 +51,7 @@ jobs:
       #     msystem: MINGW64
       #     path-type: inherit
       - name: Parse AviSynth+ release metadata
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const req = await github.request('https://api.github.com/repos/avisynth/avisynthplus/releases');
@@ -78,7 +78,7 @@ jobs:
           7z e "avsplus\*-filesonly.7z" -o"lib\x86-32" "*\x86\Output\c_api\AviSynth.lib"
           7z e "avsplus\*-filesonly.7z" -o"lib\x86-64" "*\x64\Output\c_api\AviSynth.lib"
       - name: Add MSBuild to PATH
-        uses: microsoft/setup-msbuild@v1
+        uses: microsoft/setup-msbuild@v2
       - name: Prepare NASM
         uses: ilammy/setup-nasm@v1
       - name: Setup VSYASM and VSNASM
@@ -105,7 +105,7 @@ jobs:
       # - name: Copy MINGW64 binary
       #   run: cmake -E copy "build\src\assrender.dll" "dist\Release_MINGW64\assrender.dll"
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: assrender_bin_win
           path: dist
