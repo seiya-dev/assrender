@@ -78,7 +78,7 @@ jobs:
           branch: submodule-update-${{ matrix.submodule }}
           base: master
           delete-branch: true
-          title: Update ${{ matrix.submodule }}
+          title: Update ${{ matrix.submodule }} (${{ env.SUBMODULE_REV }} to ${{ steps.latest.outputs.tag_name }})
           body: |
             Update ${{ matrix.submodule }} to ${{ steps.latest.outputs.tag_name }}
             Current: ${{ env.SUBMODULE_REV }}
