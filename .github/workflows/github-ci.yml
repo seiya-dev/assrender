@@ -75,8 +75,8 @@ jobs:
         run: curl -L "${{ env.PACKAGE_URL }}" --create-dirs -o "./avsplus/avisynthplus-latest-filesonly.7z"
       - name: Move libs files
         run: |
-          7z e "avsplus\*-filesonly.7z" -o"lib\x86-32" "*\x86\Output\c_api\AviSynth.lib"
-          7z e "avsplus\*-filesonly.7z" -o"lib\x86-64" "*\x64\Output\c_api\AviSynth.lib"
+          7z e "avsplus\*-filesonly.7z" -o"lib\x86-32" "*\x86\c_api\AviSynth.lib"
+          7z e "avsplus\*-filesonly.7z" -o"lib\x86-64" "*\x64\c_api\AviSynth.lib"
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
         with:
