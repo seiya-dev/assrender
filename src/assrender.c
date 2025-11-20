@@ -3,6 +3,159 @@
 #include "sub.h"
 #include "timecodes.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <stdint.h>
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <sys/stat.h>
+#endif
+
+static char* read_file_bytes(FILE* fp, size_t* bufsize)
+{
+    int res;
+    long sz;
+    long bytes_read;
+    char* buf;
+
+    if (!fp)
+        return NULL;
+
+    res = fseek(fp, 0, SEEK_END);
+    if (res == -1) {
+        fclose(fp);
+        return NULL;
+    }
+
+    sz = ftell(fp);
+    rewind(fp);
+
+    buf = sz < (long)SIZE_MAX ? (char*)malloc((size_t)sz + 1) : NULL;
+    if (!buf) {
+        fclose(fp);
+        return NULL;
+    }
+
+    bytes_read = 0;
+    do {
+        res = (int)fread(buf + bytes_read, 1, (size_t)sz - bytes_read, fp);
+        if (res <= 0) {
+            fclose(fp);
+            free(buf);
+            return NULL;
+        }
+        bytes_read += res;
+    } while (sz - bytes_read > 0);
+
+    buf[sz] = '\0';
+    fclose(fp);
+
+    if (bufsize)
+        *bufsize = (size_t)sz;
+    return buf;
+}
+
+static const char* detect_bom(const char* buf, const size_t bufsize)
+{
+    if (!buf)
+        return "UTF-8";
+
+    if (bufsize >= 4) {
+        if (!strncmp(buf, "\xef\xbb\xbf", 3))
+            return "UTF-8";
+        if (!strncmp(buf, "\x00\x00\xfe\xff", 4))
+            return "UTF-32BE";
+        if (!strncmp(buf, "\xff\xfe\x00\x00", 4))
+            return "UTF-32LE";
+        if (!strncmp(buf, "\xfe\xff", 2))
+            return "UTF-16BE";
+        if (!strncmp(buf, "\xff\xfe", 2))
+            return "UTF-16LE";
+    }
+    return "UTF-8";
+}
+
+#ifdef _WIN32
+static wchar_t* utf8_to_utf16le(const char* data)
+{
+    int out_size;
+    wchar_t* out;
+
+    if (!data)
+        return NULL;
+
+    out_size = MultiByteToWideChar(CP_UTF8, 0, data, -1, NULL, 0);
+    if (out_size <= 0)
+        return NULL;
+
+    out = (wchar_t*)malloc(out_size * sizeof(wchar_t));
+    if (!out)
+        return NULL;
+
+    MultiByteToWideChar(CP_UTF8, 0, data, -1, out, out_size);
+    return out;
+}
+#endif
+
+static int file_exists_utf8(const char* path)
+{
+    if (!path)
+        return 0;
+
+#ifdef _WIN32
+    wchar_t* path_utf16le = utf8_to_utf16le(path);
+    DWORD dwAttrib;
+    int exists;
+
+    if (!path_utf16le)
+        return 0;
+
+    dwAttrib = GetFileAttributesW(path_utf16le);
+    free(path_utf16le);
+
+    exists = (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+              !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+    return exists;
+#else
+    struct stat path_stat;
+    if (stat(path, &path_stat) != 0) {
+        return 0;
+    }
+    return S_ISREG(path_stat.st_mode);
+#endif
+}
+
+static FILE* open_utf8_filename(const char* f, const char* m)
+{
+    if (!f || !m)
+        return NULL;
+
+    if (!file_exists_utf8(f))
+        return NULL;
+
+#ifdef _WIN32
+    {
+        wchar_t* file_name = utf8_to_utf16le(f);
+        wchar_t* mode = utf8_to_utf16le(m);
+        FILE* fp = NULL;
+
+        if (file_name && mode)
+            fp = _wfopen(file_name, mode);
+
+        free(file_name);
+        free(mode);
+        return fp;
+    }
+#else
+    return fopen(f, m);
+#endif
+}
+
 void AVSC_CC assrender_destroy(void* ud, AVS_ScriptEnvironment* env)
 {
     ass_renderer_done(((udata*)ud)->ass_renderer);
@@ -48,8 +201,8 @@ AVS_Value AVSC_CC assrender_create(AVS_ScriptEnvironment* env, AVS_Value args,
                avs_as_int(avs_array_elt(args, 10)) : 0;
     int right = avs_is_int(avs_array_elt(args, 11)) ?
                 avs_as_int(avs_array_elt(args, 11)) : 0;
-    const char* cs = avs_as_string(avs_array_elt(args, 12)) ?
-                     avs_as_string(avs_array_elt(args, 12)) : "UTF-8";
+    /* Allow charset auto-detection via BOM if omitted */
+    const char* cs = avs_as_string(avs_array_elt(args, 12));
     int debuglevel = avs_is_int(avs_array_elt(args, 13)) ?
                      avs_as_int(avs_array_elt(args, 13)) : 0;
     const char* fontdir = avs_as_string(avs_array_elt(args, 14)) ?
@@ -69,6 +222,8 @@ AVS_Value AVSC_CC assrender_create(AVS_ScriptEnvironment* env, AVS_Value args,
     ASS_Hinting hinting;
     udata* data;
     ASS_Track* ass;
+
+    FILE* fp;
 
     /*
     no unsupported colorspace left, bitness is checked at other place
@@ -115,11 +270,46 @@ AVS_Value AVSC_CC assrender_create(AVS_ScriptEnvironment* env, AVS_Value args,
         return v;
     }
 
-    if (!strcasecmp(strrchr(f, '.'), ".srt"))
+    /* Improved Unicode / BOM / file validation loading logic */
+    if (!strcasecmp(strrchr(f, '.'), ".srt")) {
+        if (!file_exists_utf8(f)) {
+            sprintf(e, "AssRender: input file '%s' does not exist or is not a regular file", f);
+            v = avs_new_value_error(e);
+            avs_release_clip(c);
+            return v;
+        }
         ass = parse_srt(f, data, srt_font);
-    else {
-        ass = ass_read_file(data->ass_library, (char*)f, (char*)cs);
-        ass_read_matrix(f, tmpcsp);
+    } else {
+        size_t bufsize = 0;
+        char* buf;
+
+        fp = open_utf8_filename(f, "rb");
+        if (!fp) {
+            sprintf(e, "AssRender: input file '%s' does not exist or is not a regular file", f);
+            v = avs_new_value_error(e);
+            avs_release_clip(c);
+            return v;
+        }
+
+        buf = read_file_bytes(fp, &bufsize);
+        if (!buf) {
+            sprintf(e, "AssRender: unable to read '%s'", f);
+            v = avs_new_value_error(e);
+            avs_release_clip(c);
+            return v;
+        }
+
+        if (cs == NULL)
+            cs = detect_bom(buf, bufsize);
+
+        ass = ass_read_memory(data->ass_library, buf, bufsize, (char*)cs);
+        free(buf);
+
+        fp = open_utf8_filename(f, "r");
+        if (fp) {
+            ass_read_matrix(fp, tmpcsp);
+            fclose(fp);
+        }
     }
 
     if (!ass) {
@@ -133,7 +323,7 @@ AVS_Value AVSC_CC assrender_create(AVS_ScriptEnvironment* env, AVS_Value args,
 
     if (vfr) {
         int ver;
-        FILE* fh = fopen(vfr, "r");
+        FILE* fh = open_utf8_filename(vfr, "r");
 
         if (!fh) {
             sprintf(e, "AssRender: could not read timecodes file '%s'", vfr);
