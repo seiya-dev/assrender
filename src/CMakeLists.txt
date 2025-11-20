@@ -7,24 +7,15 @@ endif()
 set(ProjectName "${PluginName}")
 project(${ProjectName} LANGUAGES C)
 
-SET(ASSRender_SRC 
-    assrender.c
-    assrender.h
-    render.c
-    render.h
-    sub.c
-    sub.h
-    timecodes.c
-    timecodes.h
-    )
+file(GLOB CONFIGURE_DEPENDS ASSRender_SRC *.c)
 
-IF( WIN32 )
-    LIST(APPEND ASSRender_SRC "ASSRender.rc")
-    if(NOT MINGW AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-        # 32 bit VS only: decoration remove for old Avisynth 2.6
-        LIST(APPEND ASSRender_SRC "assrender.def")
-    ENDIF()
-ENDIF()
+if(WIN32)
+  list(APPEND ASSRender_SRC "ASSRender.rc")
+  if(NOT MINGW)
+    # 32 bit VS only: decoration remove for old Avisynth 2.6
+    list(APPEND ASSRender_SRC "assrender.def")
+  endif()
+endif()
 
 add_library(${PluginName} SHARED ${ASSRender_SRC})
 
@@ -65,5 +56,4 @@ endif()
 
 include(GNUInstallDirs)
 
-INSTALL(TARGETS ${ProjectName}
-        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/avisynth")
+INSTALL(TARGETS ${ProjectName} LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/avisynth")
