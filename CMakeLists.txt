@@ -1,9 +1,7 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
-PROJECT(assrender)
+cmake_minimum_required(VERSION 3.15)
+project(assrender)
 
 include(GNUInstallDirs)
-
-ADD_SUBDIRECTORY(src)
 
 IF(MINGW)
     SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libgcc -Wl,--add-stdcall-alias")
@@ -11,6 +9,7 @@ IF(MINGW)
     SET(CMAKE_SHARED_LINKER_FLAGS_RELEASE "-s")
     SET(CMAKE_C_FLAGS_RELEASE "-O3")
 ENDIF()
+add_subdirectory(src)
 
 # uninstall target
 configure_file(
