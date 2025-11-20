@@ -11,7 +11,7 @@ file(GLOB CONFIGURE_DEPENDS ASSRender_SRC *.c)
 
 if(WIN32)
   list(APPEND ASSRender_SRC "ASSRender.rc")
-  if(NOT MINGW)
+  if(NOT MINGW AND CMAKE_SIZEOF_VOID_P EQUAL 4)
     # 32 bit VS only: decoration remove for old Avisynth 2.6
     list(APPEND ASSRender_SRC "assrender.def")
   endif()
