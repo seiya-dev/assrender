@@ -99,8 +99,9 @@ jobs:
           meson -Ddefault_library=static -Dbuildtype=release -Dasm=enabled -Db_vscrt=static_from_buildtype -Dc_std=c11 -Dcpp_std=c++17 build
           meson compile -C build
           meson install -C build
+          cd ..
       - name: Build DLL
         run: |
-          cmake -B build -S . -D CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
-          cd build
-          msbuild /t:Rebuild /m /p:Configuration=Release /p:Platform=x64 .\assrender.sln
+          cmake -D CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -B build -S .
+          cmake --build build --config Release
+          # msbuild /t:Rebuild /m /p:Configuration=Release /p:Platform=x64 .\build\assrender.sln
