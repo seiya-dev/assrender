@@ -73,7 +73,8 @@ jobs:
           7z e "avsplus\*-filesonly.7z" -o"lib\x86-32" "*\x86\c_api\AviSynth.lib"
           7z e "avsplus\*-filesonly.7z" -o"lib\x86-64" "*\x64\c_api\AviSynth.lib"
           
-          winget install Ninja-build.Ninja NASM.NASM bloodrock.pkg-config-lite
+          # winget install Ninja-build.Ninja NASM.NASM bloodrock.pkg-config-lite
+          choco install ninja nasm pkgconfiglite
           
           python -m pip install --upgrade pip
           pip install meson
