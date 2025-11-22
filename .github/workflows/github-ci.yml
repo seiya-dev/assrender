@@ -1,0 +1,105 @@
+name: GitHub CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: #
+
+env:
+  ass_ver: 0.17.4
+
+jobs:
+  #build-linux:
+  #  runs-on: ubuntu-latest
+  #  steps:
+  #    - name: Git checkout
+  #      uses: actions/checkout@v4
+  #    - name: Install dependencies
+  #      run: |
+  #        sudo apt-get update
+  #        sudo apt-get install cmake git ninja-build checkinstall
+  #        sudo apt-get install -y --no-install-recommends build-essential g++ gcc libass-dev pkg-config
+  #        git clone https://github.com/AviSynth/AviSynthPlus avsplus
+  #        cd avsplus
+  #        cmake -G "Ninja" -B avisynth-build -S .
+  #        cd avisynth-build
+  #        ninja
+  #        sudo checkinstall --pkgname=avisynth --pkgversion="$(grep -r Version avs_core/avisynth.pc | cut -f2 -d " ")-$(date --rfc-3339=date | sed 's/-//g')-git" --backup=no --deldoc=yes --delspec=yes --deldesc=yes --strip=yes --stripso=yes --addso=yes --fstrans=no --default ninja install
+  #    - name: Build binary
+  #      run: |
+  #        cmake -B build -S .
+  #        cmake --build build --clean-first
+  #    - name: Copy binary
+  #      run: cmake -E copy "build/src/libassrender.so" "dist/libassrender.so"
+  #    - name: Upload artifact
+  #      uses: actions/upload-artifact@v4
+  #      with:
+  #        name: assrender_bin_linux
+  #        path: dist
+
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v4
+      - name: set msbuild
+        uses: ilammy/msvc-dev-cmd@v1
+        # call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsamd64_x86.bat"
+      - name: Parse AviSynth+ release metadata
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const req = await github.request('https://api.github.com/repos/avisynth/avisynthplus/releases');
+            const data = req.data;
+            let link = '';
+            for(let rel of data){
+                if(rel.prerelease||rel.draft){
+                    continue;
+                }
+                for(let asset of rel.assets){
+                    if(asset.name.match(/-filesonly.7z$/i)){
+                        link = asset.browser_download_url;
+                    }
+                }
+                if(link != ''){
+                    break;
+                }
+            }
+            core.exportVariable('PACKAGE_URL', link);
+      - name: Download AviSynth+ latest release
+        run: curl -L "${{ env.PACKAGE_URL }}" --create-dirs -o "./avsplus/avisynthplus-latest-filesonly.7z"
+      - name: get libs and set env
+        run: |
+          7z e "avsplus\*-filesonly.7z" -o"lib\x86-32" "*\x86\c_api\AviSynth.lib"
+          7z e "avsplus\*-filesonly.7z" -o"lib\x86-64" "*\x64\c_api\AviSynth.lib"
+          
+          winget install Ninja-build.Ninja NASM.NASM bloodrock.pkg-config-lite
+          
+          python -m pip install --upgrade pip
+          pip install meson
+          
+          # setx PKG_CONFIG_PATH "C:\lib\pkgconfig"
+          $env:PKG_CONFIG_PATH = "C:/lib/pkgconfig"
+          Add-Content -Path $env:GITHUB_ENV -Value "PKG_CONFIG_PATH=$env:PKG_CONFIG_PATH"
+          
+          git clone https://github.com/libass/libass.git -b ${{ env.ass_ver }} --depth=1 libass
+          
+          cd ./libass
+          # meson wrap update-db && meson wrap install fribidi && meson wrap install fontconfig && meson wrap install freetype2 && meson wrap install expat && meson wrap install harfbuzz && meson wrap install libpng && meson wrap install zlib
+          meson wrap update-db
+          meson wrap install fribidi
+          meson wrap install fontconfig
+          meson wrap install freetype2
+          meson wrap install expat
+          meson wrap install harfbuzz
+          meson wrap install libpng
+          meson wrap install zlib
+          
+          meson -Ddefault_library=static -Dbuildtype=release -Dasm=enabled -Db_vscrt=static_from_buildtype -Dc_std=c11 -Dcpp_std=c++17 build
+          meson compile -C build
+          meson install -C build
+      - name: Build DLL
+        run: |
+          cmake -B build -S . -D CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+          cd build
+          msbuild /t:Rebuild /m /p:Configuration=Release /p:Platform=x64 .\assrender.sln
