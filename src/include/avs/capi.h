@@ -42,10 +42,12 @@
 #endif
 #endif
 
-#ifdef __cplusplus
-#  define EXTERN_C extern "C"
-#else
-#  define EXTERN_C
+#ifndef EXTERN_C
+#  ifdef __cplusplus
+#    define EXTERN_C extern "C"
+#  else
+#    define EXTERN_C
+#  endif
 #endif
 
 #ifdef AVS_WINDOWS
